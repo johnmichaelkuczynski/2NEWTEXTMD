@@ -473,6 +473,86 @@ Continue for all positions.`;
   return defenses;
 }
 
+/**
+ * Generate a consolidated explanation when user wants a single unified output
+ */
+async function generateConsolidatedExplanation(
+  positions: Position[],
+  customInstructions: string,
+  format: DefenseFormat
+): Promise<string> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  
+  const claimsList = positions.map((p, i) => `${i + 1}. "${p.claim}" (${p.category})`).join('\n');
+  
+  // Determine length guidance
+  let lengthGuide = '';
+  if (format.paragraphCount === 1) {
+    lengthGuide = 'Write exactly ONE paragraph.';
+  } else if (format.paragraphCount) {
+    lengthGuide = `Write exactly ${format.paragraphCount} paragraphs.`;
+  } else if (format.pageLength) {
+    lengthGuide = 'Write approximately one page (400-500 words).';
+  } else if (format.wordCount) {
+    lengthGuide = `Write ${format.wordCount.min}-${format.wordCount.max} words.`;
+  } else if (format.sentenceCount) {
+    lengthGuide = `Write exactly ${format.sentenceCount} sentences.`;
+  }
+  
+  const systemPrompt = `You are an expert writer. Follow the user's instructions exactly. Output ONLY what they ask for - no headers, no analysis, no meta-commentary. Just the requested content.`;
+  
+  const userPrompt = `Here are the claims/statements to explain:
+
+${claimsList}
+
+USER'S INSTRUCTIONS: ${customInstructions}
+
+${lengthGuide}
+
+Write your response now. Do NOT include any headers, labels, or formatting. Just write the content directly.`;
+
+  console.log(`[POSITION-LIST] Generating consolidated explanation for ${positions.length} positions`);
+  
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 4000,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }]
+  });
+  
+  return (response.content[0] as any).text.trim();
+}
+
+/**
+ * Check if user wants a consolidated/unified output rather than per-position defenses
+ */
+function wantsConsolidatedOutput(customInstructions: string, format: DefenseFormat): boolean {
+  const upper = customInstructions.toUpperCase();
+  
+  // Single paragraph = consolidated
+  if (format.paragraphCount === 1) return true;
+  
+  // Explicit consolidation keywords
+  const consolidationPatterns = [
+    /EXPLAIN\s+(THESE|THE|ALL|BOTH)/i,
+    /WRITE\s+(ONE|A|SINGLE)\s+(PARAGRAPH|PAGE|ESSAY|EXPLANATION)/i,
+    /SUMMARIZE/i,
+    /COMBINE/i,
+    /UNIFIED/i,
+    /TOGETHER/i,
+    /AS\s+A\s+WHOLE/i,
+  ];
+  
+  for (const pattern of consolidationPatterns) {
+    if (pattern.test(customInstructions)) {
+      console.log(`[POSITION-LIST] Detected consolidated output request`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 export async function processPositionList(
   text: string,
   customInstructions: string = '',
@@ -508,10 +588,26 @@ export async function processPositionList(
       };
     }
 
-    // FIX #7: Parse format requirements BEFORE determining selection count
+    // Parse format requirements
     const format = parseDefenseFormat(customInstructions);
+    
+    // Check if user wants a consolidated output (single paragraph, unified explanation, etc.)
+    if (wantsConsolidatedOutput(customInstructions, format)) {
+      console.log(`[POSITION-LIST] Using consolidated output mode`);
+      onProgress?.('Generating consolidated explanation...', 1, 2);
+      
+      const consolidatedOutput = await generateConsolidatedExplanation(positions, customInstructions, format);
+      
+      return {
+        success: true,
+        output: consolidatedOutput,
+        positionsProcessed: positions.length,
+        positionsSelected: positions.length,
+        totalPositions: positions.length
+      };
+    }
 
-    // FIX #8: Pass total positions to parseSelectionCount
+    // Standard per-position defense mode
     const targetCount = parseSelectionCount(customInstructions, positions.length);
     const effectiveTarget = Math.min(targetCount, positions.length);
     console.log(`[POSITION-LIST] Targeting ${effectiveTarget} positions (requested: ${targetCount}, total: ${positions.length})`);
@@ -521,7 +617,6 @@ export async function processPositionList(
     console.log(`[POSITION-LIST] Selected ${rankedPositions.length} positions`);
 
     onProgress?.('Generating defenses...', 2, 4);
-    // FIX #9: Pass format to generateDefenses
     const defenses = await generateDefenses(rankedPositions, customInstructions, format);
     console.log(`[POSITION-LIST] Generated ${defenses.length} defenses`);
 
