@@ -37,17 +37,25 @@ interface DefenseFormat {
 
 export function isPositionList(text: string): boolean {
   const lines = text.trim().split('\n').filter(l => l.trim().length > 0);
-  if (lines.length < 10) return false;
+  // Accept short lists (as few as 1 line) if they match pipe-delimited format
+  if (lines.length < 1) return false;
 
   let pipeDelimitedCount = 0;
-  for (const line of lines.slice(0, Math.min(20, lines.length))) {
+  const linesToCheck = lines.slice(0, Math.min(20, lines.length));
+  for (const line of linesToCheck) {
     const parts = line.split('|').map(p => p.trim());
+    // A valid position line has at least 3 parts with meaningful content
     if (parts.length >= 3 && parts[1].length > 10) {
       pipeDelimitedCount++;
     }
   }
 
-  return pipeDelimitedCount >= lines.slice(0, 20).length * 0.7;
+  // For very short inputs (1-9 lines), require ALL lines to be pipe-delimited
+  // For longer inputs (10+), require 70% to be pipe-delimited
+  if (lines.length < 10) {
+    return pipeDelimitedCount === linesToCheck.length && pipeDelimitedCount > 0;
+  }
+  return pipeDelimitedCount >= linesToCheck.length * 0.7;
 }
 
 function parsePositions(text: string): Position[] {
