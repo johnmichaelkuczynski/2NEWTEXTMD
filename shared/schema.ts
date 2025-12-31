@@ -1089,3 +1089,41 @@ export interface HCCheckResult {
     instructions: string;
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RECURSIVE OBJECTION-PROOF REWRITE TYPES
+// For iterative rewrites with cross-chunk coherence
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ObjectionProofIteration {
+  id: string;
+  parentId: string | null;
+  version: number;
+  inputText: string;
+  outputText: string;
+  wordCount: number;
+  targetWordCount: number | null;
+  customInstructions: string | null;
+  globalSkeleton: GlobalSkeleton | null;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  createdAt: Date;
+}
+
+export interface RecursiveRewriteRequest {
+  text: string;
+  targetWordCount?: number;
+  customInstructions?: string;
+  parentIterationId?: string;
+}
+
+export interface RecursiveRewriteResult {
+  success: boolean;
+  iteration: ObjectionProofIteration;
+  processingStats?: {
+    inputWords: number;
+    outputWords: number;
+    chunksProcessed: number;
+    coherenceScore?: string;
+  };
+  error?: string;
+}
