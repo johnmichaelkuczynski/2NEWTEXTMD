@@ -1,7 +1,7 @@
-# TEXT MD
+# MEMO PRO
 
 ## Overview
-TEXT MD is designed to analyze written text using multi-model AI evaluation to assess authors' intelligence and cognitive fingerprints. It provides deep insights into cognitive abilities and thought processes from written content. Key capabilities include document analysis, AI detection, multi-language translation, comprehensive cognitive profiling, and intelligent text rewriting with advanced features for maximizing intelligence scores. Its business vision is to offer unparalleled textual analysis, catering to diverse market needs from academic research to professional content creation, aiming to become the leading platform for advanced cognitive text evaluation.
+MEMO PRO is designed to analyze written text using multi-model AI evaluation to assess authors' intelligence and cognitive fingerprints. It provides deep insights into cognitive abilities and thought processes from written content. Key capabilities include document analysis, AI detection, multi-language translation, comprehensive cognitive profiling, and intelligent text rewriting with advanced features for maximizing intelligence scores. Its business vision is to offer unparalleled textual analysis, catering to diverse market needs from academic research to professional content creation, aiming to become the leading platform for advanced cognitive text evaluation.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
